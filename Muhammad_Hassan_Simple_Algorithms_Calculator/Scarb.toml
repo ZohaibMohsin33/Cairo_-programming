@@ -1,0 +1,10 @@
+[package]
+name = "muhammad_hassan_simple_algorithms_calculator"
+version = "0.1.0"
+edition = "2025_12"
+
+[cairo]
+enable-gas = false
+
+[dev-dependencies]
+cairo_test = "2.18.0"
