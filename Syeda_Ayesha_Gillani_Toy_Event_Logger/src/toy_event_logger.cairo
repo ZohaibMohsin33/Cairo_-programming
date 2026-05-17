@@ -8,30 +8,28 @@
 // -----------------------
 // A simple on-chain diary for toy-related events.
 // Any wallet can call log_event() to record that something
-// happened to a toy (played with, lost, broken, gifted …).
+// happened to a toy (played with, lost, broken, gifted ...).
 // Each entry is stored in contract storage AND emitted as a
 // Starknet event so off-chain indexers / block explorers can
 // read the full history without scanning storage slots.
 //
 // KEY CONCEPTS DEMONSTRATED
 // -------------------------
-//  1. #[storage]          — persistent on-chain state
-//  2. Map<K,V>            — key-value mapping in storage
-//  3. #[event] / emit()   — Starknet event emission
-//  4. Structs + #[derive] — custom data types for storage
-//  5. #[starknet::interface] — ABI interface declaration
-//  6. Constructor         — one-time initialisation on deploy
-//  7. Access control      — owner-only reset with assert()
-//  8. get_caller_address  — identify who is calling
-//  9. get_block_timestamp — record when an event happened
+//  1. #[storage]              — persistent on-chain state
+//  2. Map<K,V>                — key-value mapping in storage
+//  3. #[event] / emit()       — Starknet event emission
+//  4. Structs + #[derive]     — custom data types for storage
+//  5. #[starknet::interface]  — ABI interface declaration
+//  6. Constructor             — one-time initialisation on deploy
+//  7. Access control          — owner-only reset with assert()
+//  8. get_caller_address      — identify who is calling
+//  9. get_block_timestamp     — record when an event happened
 //
 // BUILD: scarb build
 // ================================================================
 
 // ── Imports ─────────────────────────────────────────────────────
-use starknet::ContractAddress;        // Starknet account/contract address type
-use starknet::get_caller_address;     // Returns the address of the current caller
-use starknet::get_block_timestamp;    // Returns the current block's Unix timestamp (u64)
+use starknet::ContractAddress; // Starknet account/contract address type
 
 // ================================================================
 // INTERFACE
@@ -69,14 +67,14 @@ trait IToyEventLogger<TContractState> {
 
 // ================================================================
 // STRUCT — ToyEvent
-// Represents one log entry.  Each field is a felt252 or a native
+// Represents one log entry. Each field is a felt252 or a native
 // Starknet type, which keeps storage layout simple and cheap.
 //
 // #[derive] macros are compile-time code generation:
-//   Drop         — value can be silently discarded (required by Cairo)
-//   Serde        — serialise / deserialise for ABI calls
+//   Drop            — value can be silently discarded (required by Cairo)
+//   Serde           — serialise / deserialise for ABI calls
 //   starknet::Store — can be written to and read from contract storage
-//   Copy         — value can be duplicated without moving ownership
+//   Copy            — value can be duplicated without moving ownership
 // ================================================================
 #[derive(Drop, Serde, starknet::Store, Copy)]
 struct ToyEvent {
@@ -94,15 +92,24 @@ struct ToyEvent {
 // ================================================================
 #[starknet::contract]
 mod ToyEventLogger {
-    // Bring parent-scope items into this module's namespace
-    use super::{IToyEventLogger, ToyEvent, ContractAddress};
-    use starknet::get_caller_address;
-    use starknet::get_block_timestamp;
+    use super::{ToyEvent, ContractAddress};
+
+    // Cairo 2.6+ requires these storage traits imported explicitly.
+    // Without them .read() and .write() are not found on storage fields.
+    use starknet::storage::{
+        StoragePointerReadAccess,   // enables .read() on plain fields
+        StoragePointerWriteAccess,  // enables .write() on plain fields
+        StorageMapReadAccess,       // enables .read(key) on Map fields
+        StorageMapWriteAccess,      // enables .write(key, val) on Map fields
+        Map,                        // the Map<K,V> type itself
+    };
+    use starknet::get_caller_address;  // Returns the address of the current caller
+    use starknet::get_block_timestamp; // Returns the current block's Unix timestamp (u64)
 
     // ── Storage ─────────────────────────────────────────────────
     // #[storage] marks the single struct that holds ALL persistent
-    // state for this contract.  Every field here survives between
-    // transactions.  Reading costs gas; writing costs more gas.
+    // state for this contract. Every field here survives between
+    // transactions. Reading costs gas; writing costs more gas.
     // ────────────────────────────────────────────────────────────
     #[storage]
     struct Storage {
@@ -112,17 +119,17 @@ mod ToyEventLogger {
 
         /// The main log: maps an index (u64) to a ToyEvent.
         /// Think of it as a dynamic array backed by a hash map.
-        events: starknet::storage::Map<u64, ToyEvent>,
+        events: Map<u64, ToyEvent>,
 
         /// Tracks the index of each address's most recent event.
         /// Lets us answer "what was the last thing X logged?"
-        last_event_index_by: starknet::storage::Map<ContractAddress, u64>,
+        last_event_index_by: Map<ContractAddress, u64>,
 
         /// Boolean flag: true if an address has ever called log_event.
         /// Prevents reading last_event_index_by for unknown addresses.
-        has_logged: starknet::storage::Map<ContractAddress, bool>,
+        has_logged: Map<ContractAddress, bool>,
 
-        /// The deployer's address.  Set once in the constructor.
+        /// The deployer's address. Set once in the constructor.
         /// Used to restrict reset_log() to the owner only.
         owner: ContractAddress,
     }
@@ -146,7 +153,7 @@ mod ToyEventLogger {
     #[derive(Drop, starknet::Event)]
     struct ToyEventLogged {
         #[key]
-        index: u64,                // Position in the log (filterable)
+        index: u64,                 // Position in the log (filterable)
         #[key]
         logged_by: ContractAddress, // Caller address (filterable)
         toy_name: felt252,
@@ -199,7 +206,7 @@ mod ToyEventLogger {
 
             // Construct the ToyEvent struct from the call parameters
             let new_event = ToyEvent {
-                toy_name,       // shorthand for toy_name: toy_name
+                toy_name,      // shorthand for toy_name: toy_name
                 event_type,
                 notes,
                 logged_by: caller,
@@ -275,7 +282,7 @@ mod ToyEventLogger {
             // Save current count for the emitted event
             let previous_count: u64 = self.event_count.read();
 
-            // Reset counter — old events are now unreachable via get_event
+            // Reset counter — old events now unreachable via get_event
             self.event_count.write(0);
 
             // Emit so off-chain systems know the log was wiped
