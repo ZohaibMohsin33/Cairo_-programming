@@ -1,0 +1,1 @@
+{"contracts_info":[],"function_set_costs":[],"named_tests":[["palindrome_checker::tests::test_valid_palindrome",{"available_gas":4294967295,"expectation":"Success","ignored":false}],["palindrome_checker::tests::test_invalid_palindrome",{"available_gas":4294967295,"expectation":"Success","ignored":false}]]}
