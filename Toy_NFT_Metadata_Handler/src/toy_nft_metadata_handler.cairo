@@ -90,7 +90,6 @@ mod ToyNFTMetadataHandler {
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress) {
         self.owner.write(owner);
-        self.total_minted.write(0_u256);
     }
 
     #[abi(embed_v0)]
@@ -140,8 +139,8 @@ mod ToyNFTMetadataHandler {
             let owner = self.owner.read();
             assert(caller == owner, 'Only owner can update');
 
-            assert(token_id <= self.total_minted.read(), 'Token does not exist');
             assert(token_id > 0_u256, 'Invalid token ID');
+            assert(token_id <= self.total_minted.read(), 'Token does not exist');
 
             self.names.write(token_id, name.clone());
             self.descriptions.write(token_id, description);
@@ -188,13 +187,13 @@ mod tests {
         starknet::testing::set_caller_address(owner);
 
         let to = contract_address_const::<456>();
-        let name: ByteArray = "Super Toy";
-        let description: ByteArray = "A super powerful toy";
-        let image_uri: ByteArray = "https://ipfs.io/super_toy";
-        let rarity: ByteArray = "Legendary";
+        let name = "Super Toy";
+        let description = "A super powerful toy";
+        let image_uri = "https://ipfs.io/super_toy";
+        let rarity = "Legendary";
         let power_level = 9000_u32;
 
-        ToyNFTMetadataHandler::ToyNFTMetadataHandlerImpl::mint_toy_nft(
+        ToyNFTMetadataHandler::mint_toy_nft(
             ref state,
             to,
             name,
