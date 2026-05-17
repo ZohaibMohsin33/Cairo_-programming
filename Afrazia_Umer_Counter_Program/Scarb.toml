@@ -1,0 +1,13 @@
+[package]
+name = "afrazia_umer_counter_program"
+version = "0.1.0"
+edition = "2024_07"
+
+[dependencies]
+starknet = ">=2.6.3"
+
+[dev-dependencies]
+cairo_test = "*"
+
+[[target.starknet-contract]]
+sierra = true
