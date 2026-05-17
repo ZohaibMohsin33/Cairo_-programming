@@ -1,9 +1,0 @@
-[package]
-name = "maheen_fatima_attendance_tracker"
-version = "0.1.0"
-edition = "2025_12"
-
-[dependencies]
-starknet = "2.18.0"
-
-[[target.starknet-contract]]

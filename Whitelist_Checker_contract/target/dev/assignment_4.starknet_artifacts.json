@@ -1,1 +1,0 @@
-{"version":1,"contracts":[{"id":"75ft98leqq5q6","package_name":"assignment_4","contract_name":"WhitelistChecker","module_path":"assignment_4::whitelist_checker::WhitelistChecker","artifacts":{"sierra":"assignment_4_WhitelistChecker.contract_class.json","casm":"assignment_4_WhitelistChecker.compiled_contract_class.json"}}]}
