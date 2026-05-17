@@ -1,0 +1,9 @@
+[package]
+name = "storage_variables"
+version = "0.1.0"
+edition = "2023_01"
+
+[dependencies]
+starknet = "2.8.2"
+
+[[target.starknet-contract]]
