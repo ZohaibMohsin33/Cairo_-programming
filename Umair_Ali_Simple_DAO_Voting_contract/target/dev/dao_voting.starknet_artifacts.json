@@ -1,1 +1,0 @@
-{"version":1,"contracts":[{"id":"59frbug3d8m9q","package_name":"dao_voting","contract_name":"DAOVoting","module_path":"dao_voting::DAOVoting","artifacts":{"sierra":"dao_voting_DAOVoting.contract_class.json","casm":"dao_voting_DAOVoting.compiled_contract_class.json"}}]}
