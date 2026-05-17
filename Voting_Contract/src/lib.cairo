@@ -1,1 +1,0 @@
-mod voting_cont;
