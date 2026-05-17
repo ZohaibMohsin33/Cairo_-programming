@@ -1,27 +1,16 @@
-# Mappings in Cairo Programming Language
-### A Complete Research Document
+# Mapping like Storage Contract in Cairo
+
+Cairo is a programming language developed by StarkWare Industries for writing provable programs on StarkNet — a decentralized Layer 2 network built on top of Ethereum. Unlike traditional smart contract languages like Solidity, Cairo is built around ZK-STARKs (Zero-Knowledge Scalable Transparent ARguments of Knowledge), which means every program execution can be mathematically verified without exposing private data.
+
+Cairo 1.x, the modern version, has a syntax close to Rust, which makes it safer and more structured than the original Cairo 0. Every StarkNet smart contract is written in Cairo, and understanding how data is stored on-chain is one of the first things you need to get right.
 
 ---
 
-## 1. Introduction to Cairo
+## What is a Mapping?
 
-Cairo is a programming language developed by **StarkWare Industries** for writing provable programs. It is the native language of **StarkNet** — a decentralized, permissionless Layer 2 (L2) validity rollup built on top of Ethereum.
+A mapping stores data as **key → value** pairs. You give it a key, and you get back a value. It is one of the most commonly used data structures in smart contract development because most on-chain logic revolves around looking things up — checking a balance, finding the owner of a token, seeing if an address has voted.
 
-Unlike traditional smart contract languages like Solidity, Cairo is designed around **ZK-STARKs** (Zero-Knowledge Scalable Transparent ARguments of Knowledge), which means every program execution can be mathematically proven correct without revealing private data.
-
-Cairo 1.0 (the modern version) has a syntax heavily inspired by **Rust**, making it safer and more developer-friendly than the original Cairo 0.
-
-### Why Cairo Matters
-- Enables cheap and fast transactions on StarkNet
-- Provides mathematical proof of computation correctness
-- Powers DeFi, NFT, and gaming applications on Ethereum's L2
-- Every StarkNet smart contract is written in Cairo
-
----
-
-## 2. What is a Mapping?
-
-A **mapping** is a fundamental data structure in smart contract development. It stores data as **key → value** pairs, similar to:
+Other languages have the same idea under different names:
 
 | Language | Name |
 |----------|------|
@@ -31,41 +20,24 @@ A **mapping** is a fundamental data structure in smart contract development. It 
 | Java | `HashMap` |
 | Cairo | `LegacyMap` |
 
-### Simple Mental Model
-
-Think of a mapping like a **locker system** at a gym:
-- Every locker has a **unique number** (the key)
-- Inside each locker is **your stuff** (the value)
-- You can only open a locker if you know its exact number
-- You cannot see all lockers at once — only one at a time
+A good way to picture it: imagine a locker system. Each locker has a unique number (the key), and inside is whatever was stored there (the value). You can only open one locker at a time, and you must know the exact number to open it. There is no way to look at all lockers at once.
 
 ```
-Key          →     Value
----------          -------
-Locker #5    →     Ali's bag
-Locker #12   →     Sara's bag
-Locker #99   →     Ahmed's bag
-```
-
-In a smart contract:
-```
-Key             →     Value
------------           -------
-Wallet Address  →     Token Balance
-Student ID      →     Grade
-User Address    →     Has Voted (true/false)
-Token ID        →     Owner Address
+Key              →     Value
+-----------            -------
+Wallet Address   →     Token Balance
+Student ID       →     Grade
+User Address     →     Has Voted (true/false)
+Token ID         →     Owner Address
 ```
 
 ---
 
-## 3. Mappings in Cairo — The LegacyMap Type
+## Storage in Cairo Contracts
 
-In Cairo 1.x (StarkNet contracts), the mapping type is called **`LegacyMap`**.
+In a Cairo contract, all persistent on-chain data is declared inside a special block called `#[storage]`. Anything you put there gets saved to the blockchain and survives across transactions. A mapping is just one kind of variable you can declare inside storage.
 
-It is declared inside the `#[storage]` struct — a special block that holds all persistent (on-chain) data of the contract.
-
-### Basic Syntax
+The mapping type is called `LegacyMap` and uses this syntax:
 
 ```cairo
 #[storage]
@@ -74,48 +46,37 @@ struct Storage {
 }
 ```
 
-### Real Examples
+A few real examples showing different key and value types:
 
 ```cairo
 use starknet::ContractAddress;
 
 #[storage]
 struct Storage {
-    // Address → Balance (for tokens)
-    balances: LegacyMap::<ContractAddress, u256>,
-
-    // Address → Has voted? (for voting systems)
-    has_voted: LegacyMap::<ContractAddress, bool>,
-
-    // Student ID → Score (for grade systems)
-    scores: LegacyMap::<u32, u8>,
-
-    // ID → Name (for registries)
-    names: LegacyMap::<u32, felt252>,
+    balances:   LegacyMap::<ContractAddress, u256>,
+    has_voted:  LegacyMap::<ContractAddress, bool>,
+    scores:     LegacyMap::<u32, u8>,
+    names:      LegacyMap::<u32, felt252>,
 }
 ```
 
+Each of these stores a different kind of relationship. `balances` maps a wallet address to a token amount. `has_voted` maps a wallet to a yes/no flag. `scores` maps a numeric ID to an 8-bit score. All four live in the same storage struct and do not interfere with each other.
+
 ---
 
-## 4. How Mappings Work Internally
+## How Storage Actually Works
 
-### 4.1 Storage Slots on StarkNet
-
-StarkNet's storage is a giant table of `(address, key) → value` pairs. Every storage variable in your contract maps to a unique **storage slot**.
-
-For a mapping, the slot is calculated using a **Pedersen Hash** of:
-1. The variable name (e.g., `"balances"`)
-2. The key (e.g., a wallet address)
+StarkNet's storage is a large table of `(contract address, slot) → value` pairs. Each storage variable in your contract occupies its own unique slot. For a mapping, the slot is not fixed — it is calculated dynamically for each key using a **Pedersen Hash**:
 
 ```
 storage_slot = pedersen_hash("balances", wallet_address)
 ```
 
-This guarantees every `(mapping_name, key)` combination has a unique slot on-chain.
+This means the storage slot for `balances[address_A]` is completely different from `balances[address_B]`, and neither collides with any other mapping in the contract. Every `(mapping name, key)` combination has its own guaranteed-unique slot on-chain.
 
-### 4.2 Default Values
+### Default Values
 
-If you read a key that was **never written to**, Cairo returns the **zero/default value** for that type:
+If you read a key that was never written, Cairo returns the zero/default value for that type rather than throwing an error:
 
 | Type | Default Value |
 |------|--------------|
@@ -124,292 +85,279 @@ If you read a key that was **never written to**, Cairo returns the **zero/defaul
 | `felt252` | `0` |
 | `ContractAddress` | Zero address |
 
-This means mappings in Cairo are **implicitly infinite** — every possible key exists with a zero default.
-
-### 4.3 No Iteration
-
-Mappings in Cairo (like in Solidity) **cannot be iterated**. You cannot loop through all keys. The blockchain only stores individual slots — there is no internal list of which keys were written.
-
-**Workaround:** Maintain a separate array of keys if you need iteration.
+This means every possible key technically "exists" — it just returns zero until something is written to it. Keep this in mind when writing logic that depends on whether a key was ever set.
 
 ---
 
-## 5. Reading and Writing to Mappings
+## Reading and Writing
 
-### 5.1 Writing a Value (`.write`)
+You interact with a mapping using `.read()` and `.write()`. Both take the key as an argument.
+
+### Writing a value
 
 ```cairo
-// Syntax: self.mapping_name.write(key, value);
-
 self.balances.write(user_address, 1000_u256);
 self.has_voted.write(voter_address, true);
 self.scores.write(1_u32, 95_u8);
 ```
 
-### 5.2 Reading a Value (`.read`)
+### Reading a value
 
 ```cairo
-// Syntax: let variable = self.mapping_name.read(key);
-
-let balance = self.balances.read(user_address);     // returns u256
-let voted   = self.has_voted.read(voter_address);   // returns bool
-let score   = self.scores.read(1_u32);              // returns u8
+let balance = self.balances.read(user_address);
+let voted   = self.has_voted.read(voter_address);
+let score   = self.scores.read(1_u32);
 ```
 
-### 5.3 Full Example Function
+The type returned by `.read()` matches whatever `ValueType` was declared in the mapping. You do not need to cast it.
+
+---
+
+## A Practical Example — Transfer Function
+
+Here is a transfer function that uses the balances mapping to move tokens from one address to another:
 
 ```cairo
 fn transfer(ref self: ContractState, to: ContractAddress, amount: u256) {
     let caller = get_caller_address();
 
-    // READ: get sender's current balance
     let sender_balance = self.balances.read(caller);
-
-    // Check sender has enough
     assert(sender_balance >= amount, 'Insufficient balance');
 
-    // READ: get receiver's current balance
     let receiver_balance = self.balances.read(to);
 
-    // WRITE: update both balances
     self.balances.write(caller, sender_balance - amount);
     self.balances.write(to, receiver_balance + amount);
 }
 ```
 
+The pattern here is: read current values into local variables, validate, then write the updated values back. Reading into a local variable first also means you are not hitting storage twice for the same key, which matters for transaction fees.
+
 ---
 
-## 6. Supported Key and Value Types
+## Supported Key and Value Types
 
 ### Key Types
 
-| Type | Description | Example Use |
-|------|-------------|-------------|
-| `ContractAddress` | Wallet or contract address | Token balances |
-| `felt252` | Cairo's native 252-bit field element | General purpose keys |
+| Type | Description | Common Use |
+|------|-------------|------------|
+| `ContractAddress` | Wallet or contract address | Token balances, access control |
+| `felt252` | Cairo's native 252-bit field element | General purpose |
 | `u8` | 8-bit unsigned integer (0–255) | Subject IDs, small indices |
 | `u16` | 16-bit unsigned integer | Medium indices |
 | `u32` | 32-bit unsigned integer | Student IDs, item IDs |
 | `u64` | 64-bit unsigned integer | Timestamps, large IDs |
 | `u128` | 128-bit unsigned integer | Large numerical keys |
-| `u256` | 256-bit unsigned integer | Token IDs in NFTs |
-| `bool` | Boolean | Rarely used as key |
-| `(T1, T2)` | Tuple of types | Nested mappings |
+| `u256` | 256-bit unsigned integer | NFT token IDs |
+| `(T1, T2)` | Tuple of two types | Composite / nested keys |
 
 ### Value Types
 
-Value can be any type that implements the **`Store`** trait, including:
-- All integer types (`u8`, `u16`, `u32`, `u64`, `u128`, `u256`)
-- `bool`
-- `felt252`
-- `ContractAddress`
-- Structs (if they implement `Store`)
+The value can be any type that implements Cairo's `Store` trait. This includes all integer types, `bool`, `felt252`, `ContractAddress`, and custom structs as long as they also implement `Store`.
 
 ---
 
-## 7. Nested Mappings
+## Tuple Keys — Nested Mappings
 
-Cairo does not have true nested mapping syntax like `mapping(address => mapping(uint => uint))` in Solidity. Instead, it uses **tuple keys** to achieve the same result.
+Solidity allows nested mappings like `mapping(address => mapping(uint => uint))`. Cairo does not have that syntax. Instead, you combine multiple keys into a single **tuple key**, which achieves the same result:
 
-### Solidity Nested Mapping (for comparison):
+### Solidity (for comparison):
 ```solidity
 mapping(address => mapping(uint256 => uint256)) public subjectGrades;
-// Access: subjectGrades[student][subjectId]
 ```
 
-### Cairo Equivalent — Tuple Key:
+### Cairo equivalent:
 ```cairo
 #[storage]
 struct Storage {
-    // (student_address, subject_id) → grade
     subject_grades: LegacyMap::<(ContractAddress, u8), u8>,
 }
+```
 
-// Write:
+Access looks like this:
+
+```cairo
 self.subject_grades.write((student_addr, 1_u8), 90_u8);
-
-// Read:
 let grade = self.subject_grades.read((student_addr, 1_u8));
 ```
 
-The tuple `(ContractAddress, u8)` acts as a **composite key**. Internally, Cairo hashes both parts together to form a unique storage slot.
+Internally, Cairo hashes both parts of the tuple together to form a single unique storage slot, so the behavior is identical to a nested mapping — just written differently.
 
-### Triple Nested (Three-part tuple):
+You can also go three levels deep with a three-part tuple:
+
 ```cairo
 permissions: LegacyMap::<(ContractAddress, ContractAddress, u8), bool>,
-// (owner, operator, token_type) → is_approved
 ```
+
+This could represent `(owner, operator, token_type) → is_approved`, which is the kind of structure used in multi-token standards.
 
 ---
 
-## 8. Multiple Mappings in One Contract
+## Multiple Mappings in One Contract
 
-A real contract often uses **several mappings together**. Here is how a token contract might look:
+Most real contracts use several mappings together. Here is what a basic token contract's storage might look like:
 
 ```cairo
 #[storage]
 struct Storage {
-    // ERC-20 style: address → token balance
-    balances: LegacyMap::<ContractAddress, u256>,
-
-    // ERC-20 style: (owner, spender) → how much spender can use
-    allowances: LegacyMap::<(ContractAddress, ContractAddress), u256>,
-
-    // NFT style: token_id → owner address
-    owners: LegacyMap::<u256, ContractAddress>,
-
-    // Access control: address → is admin?
-    is_admin: LegacyMap::<ContractAddress, bool>,
-
-    // Total supply (not a mapping, just a single value)
+    balances:     LegacyMap::<ContractAddress, u256>,
+    allowances:   LegacyMap::<(ContractAddress, ContractAddress), u256>,
+    owners:       LegacyMap::<u256, ContractAddress>,
+    is_admin:     LegacyMap::<ContractAddress, bool>,
     total_supply: u256,
 }
 ```
 
+`balances` tracks how many tokens each address holds. `allowances` tracks how much one address is permitted to spend on behalf of another — this is the ERC-20 approve system. `owners` maps NFT token IDs to their current owner. `is_admin` is an access control flag. And `total_supply` is just a plain single value. A contract's storage can mix mappings and regular variables freely.
+
 ---
 
-## 9. Mappings vs Arrays vs Single Variables
+## Mappings vs Arrays vs Single Variables
 
-| Feature | Mapping (`LegacyMap`) | Array (`Array<T>`) | Single Variable |
-|---------|----------------------|-------------------|-----------------|
-| Access pattern | By any key | By integer index | Direct |
-| Iterable | ❌ No | ✅ Yes | N/A |
-| Default value | Zero for any key | Must push elements | Must initialize |
+It helps to know when to reach for a mapping versus an array or a plain variable:
+
+| Feature | `LegacyMap` | Array | Single Variable |
+|---------|-------------|-------|-----------------|
+| Access by | Any key | Integer index only | Direct |
+| Iterable | No | Yes | N/A |
+| Default for missing key | Zero | Must push first | Must initialize |
 | Storage cost | Per key written | Per element | Fixed |
 | Best for | Lookups (balance, ownership) | Ordered lists | Counters, flags |
-| Key type | Any supported type | Only `u32` index | N/A |
-| Can check "exists" | ❌ No (returns 0) | ✅ Yes (check length) | N/A |
+| Can check if key exists | No (returns 0) | Yes (check length) | N/A |
+
+Use a mapping when you need fast lookups by an arbitrary key. Use an array when order matters or you need to loop through everything. Use a plain variable for a single piece of state like a counter or a flag.
 
 ---
 
-## 10. Common Real-World Use Cases
+## Limitations of Mappings
 
-### 10.1 Token Balances (ERC-20)
-```cairo
-balances: LegacyMap::<ContractAddress, u256>
-// Every wallet address maps to how many tokens it holds
-```
+Mappings in Cairo have a few hard constraints that are worth understanding before you run into them:
 
-### 10.2 NFT Ownership (ERC-721)
-```cairo
-owners: LegacyMap::<u256, ContractAddress>
-// Every token ID maps to the address that owns it
-```
+**No iteration** — There is no way to loop through all the keys in a mapping. The blockchain stores individual slots but does not keep track of which keys were ever written. This is the same limitation as in Solidity.
 
-### 10.3 Voting System
-```cairo
-has_voted: LegacyMap::<ContractAddress, bool>
-votes_for_candidate: LegacyMap::<felt252, u32>
-// Track who voted, and how many votes each candidate has
-```
+**No length or count** — There is no built-in `.len()` or similar method. If you need to know how many entries exist, you have to track that yourself with a separate counter.
 
-### 10.4 Access Control / Whitelist
-```cairo
-is_whitelisted: LegacyMap::<ContractAddress, bool>
-role: LegacyMap::<ContractAddress, u8>
-// 0 = no role, 1 = admin, 2 = moderator
-```
+**No deletion** — You cannot remove an entry. The closest you can do is overwrite it with the zero value, but the slot still exists on-chain.
 
-### 10.5 Allowance System (like ERC-20 approve)
-```cairo
-allowances: LegacyMap::<(ContractAddress, ContractAddress), u256>
-// (owner, spender) → how much the spender is allowed to use
-```
+**No existence check** — Since an unwritten key returns `0` by default, you cannot distinguish between "this key was never set" and "this key was explicitly set to zero" without extra logic.
 
-### 10.6 Student Grade Book
-```cairo
-grades:         LegacyMap::<ContractAddress, u8>
-subject_grades: LegacyMap::<(ContractAddress, u8), u8>
-is_registered:  LegacyMap::<ContractAddress, bool>
-```
+**Key must be known** — You can only retrieve a value if you already know the exact key. There is no search or filter operation.
 
----
+### Workaround for Iteration
 
-## 11. Limitations of Mappings
-
-| Limitation | Explanation |
-|------------|-------------|
-| **Not iterable** | You cannot loop through all stored keys |
-| **No length/count** | No built-in way to count how many keys were written |
-| **No deletion** | You can only overwrite with `0` or default — there is no `delete` |
-| **No existence check** | Reading an unwritten key returns `0`, not an error |
-| **Key must be known** | You must know the exact key to retrieve a value |
-
-### How to Work Around These Limitations
+If you need to iterate over all entries, maintain a companion mapping that acts as an indexed list, alongside a counter variable:
 
 ```cairo
 #[storage]
 struct Storage {
-    // The mapping itself
-    grades: LegacyMap::<ContractAddress, u8>,
-
-    // Companion array to track all keys (for iteration)
-    student_list: LegacyMap::<u32, ContractAddress>,
-
-    // Manual count of how many keys exist
+    grades:        LegacyMap::<ContractAddress, u8>,
+    student_list:  LegacyMap::<u32, ContractAddress>,
     student_count: u32,
 }
 
-// When writing to the mapping, also record the key:
 fn add_student(ref self: ContractState, student: ContractAddress, grade: u8) {
     self.grades.write(student, grade);
 
     let count = self.student_count.read();
-    self.student_list.write(count, student);  // record the key
-    self.student_count.write(count + 1);       // increment counter
+    self.student_list.write(count, student);
+    self.student_count.write(count + 1);
 }
 ```
 
+Now you can iterate from index `0` to `student_count - 1` to get every address, then use those addresses to look up the actual grades. It is more verbose than a native iteration, but it works reliably.
+
 ---
 
-## 12. Mappings and Gas / Fees
+## Mappings and Transaction Fees
 
-On StarkNet, every storage write costs a fee (paid in ETH or STRK). Here are best practices:
+On StarkNet, every storage write costs a fee paid in ETH or STRK. Reads are cheaper but still have a cost. A few practices make a noticeable difference:
 
-- **Minimize writes** — only write when value actually changes
-- **Batch operations** — combine multiple changes in one transaction
-- **Avoid redundant reads** — cache the value in a local variable if reading multiple times
+**Read once, reuse.** If you need a value more than once in a function, read it into a local variable the first time and reuse that variable instead of calling `.read()` again.
 
 ```cairo
-// BAD — reads the same value twice from storage (costs more)
+// Less efficient — reads from storage twice
 if self.balances.read(addr) > 0 {
     let b = self.balances.read(addr);
     self.balances.write(addr, b - 1);
 }
 
-// GOOD — read once, reuse
+// Better — reads once, stores in a local variable
 let balance = self.balances.read(addr);
 if balance > 0 {
     self.balances.write(addr, balance - 1);
 }
 ```
 
+**Only write when the value changes.** Writing the same value back to storage wastes fees. Check whether the new value actually differs before writing, when that makes sense in your logic.
+
+**Batch related changes.** If a single operation updates multiple related mappings — like a transfer updating both sender and receiver balances — do it all in one transaction rather than spreading it across multiple calls.
+
 ---
 
-## 13. Summary
+## Common Real-World Use Cases
+
+### Token Balances (ERC-20 style)
+```cairo
+balances: LegacyMap::<ContractAddress, u256>
+```
+Every wallet address maps to how many tokens it holds. This is the most common mapping in any token contract.
+
+### NFT Ownership (ERC-721 style)
+```cairo
+owners: LegacyMap::<u256, ContractAddress>
+```
+Every token ID maps to the address that currently owns it.
+
+### Voting System
+```cairo
+has_voted:           LegacyMap::<ContractAddress, bool>
+votes_for_candidate: LegacyMap::<felt252, u32>
+```
+Track which addresses have cast a vote, and how many votes each candidate has received.
+
+### Access Control and Whitelists
+```cairo
+is_whitelisted: LegacyMap::<ContractAddress, bool>
+role:           LegacyMap::<ContractAddress, u8>
+```
+A simple role system where `0` means no role, `1` means admin, `2` means moderator, and so on. The address is the key and the role number is the value.
+
+### Allowances (ERC-20 approve)
+```cairo
+allowances: LegacyMap::<(ContractAddress, ContractAddress), u256>
+```
+Maps `(owner, spender)` to how much the spender is allowed to transfer on the owner's behalf.
+
+### Student Grade Book
+```cairo
+grades:         LegacyMap::<ContractAddress, u8>
+subject_grades: LegacyMap::<(ContractAddress, u8), u8>
+is_registered:  LegacyMap::<ContractAddress, bool>
+```
+A contract that tracks whether a student is registered, their overall grade, and their grade broken down per subject using a tuple key.
+
+---
+
+## Summary
 
 | Concept | Detail |
 |---------|--------|
-| **Type name** | `LegacyMap::<KeyType, ValueType>` |
-| **Declared in** | `#[storage]` struct |
-| **Write** | `self.mapping.write(key, value)` |
-| **Read** | `self.mapping.read(key)` |
-| **Default** | Zero/false for unwritten keys |
-| **Nested** | Use tuple keys `(T1, T2)` |
-| **Iterable** | No |
-| **Storage** | Pedersen hash of (variable name + key) |
-| **Used for** | Balances, ownership, access control, voting |
+| Type name | `LegacyMap::<KeyType, ValueType>` |
+| Declared in | `#[storage]` struct |
+| Write | `self.mapping.write(key, value)` |
+| Read | `self.mapping.read(key)` |
+| Default value | Zero / false for any unwritten key |
+| Nested mappings | Use tuple keys: `(T1, T2)` |
+| Iterable | No |
+| Storage mechanism | Pedersen hash of (variable name + key) |
+| Primary use cases | Balances, ownership, voting, access control |
 
 ---
 
-## 14. References
+## References
 
 - [Cairo Book — Contract Storage](https://book.cairo-lang.org/ch14-01-contract-storage.html)
 - [StarkNet Documentation](https://docs.starknet.io)
 - [OpenZeppelin Cairo Contracts](https://github.com/OpenZeppelin/cairo-contracts)
 - [Scarb Package Manager](https://docs.swmansion.com/scarb/)
-- [StarkNet Foundry (Testing)](https://foundry-rs.github.io/starknet-foundry/)
-
----
-
-*Research compiled for the Cairo Programming Assignments — Mappings Topic*
+- [StarkNet Foundry — Testing](https://foundry-rs.github.io/starknet-foundry/)
