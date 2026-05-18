@@ -1,0 +1,1 @@
+{"version":1,"contracts":[{"id":"50r8lp8gjecso","package_name":"erc721_basics","contract_name":"ERC721Basics","module_path":"erc721_basics::erc721::ERC721Basics","artifacts":{"sierra":"erc721_basics_ERC721Basics.contract_class.json","casm":null}}]}
