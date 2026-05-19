@@ -1,0 +1,1 @@
+{"version":1,"contracts":[{"id":"pqrldccf8cadk","package_name":"token_faucet","contract_name":"TokenFaucet","module_path":"token_faucet::TokenFaucet","artifacts":{"sierra":"token_faucet_TokenFaucet.contract_class.json","casm":null}}]}
