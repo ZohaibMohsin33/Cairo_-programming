@@ -1,0 +1,11 @@
+[package]
+name = "voting_simulator" 
+version = "0.1.0"
+edition = "2024_07"
+
+# This line explicitly tells Scarb to compile this project as a Starknet smart contract
+[[target.starknet-contract]]
+
+[dependencies]
+# This brings in all Starknet core types like ContractAddress and LegacyMap
+starknet = ">=2.7.0"
