@@ -1,0 +1,7 @@
+[package]
+name = "simple_algorithm_prime_checker"
+version = "0.1.0"
+edition = "2024_07"
+
+[dependencies]
+
