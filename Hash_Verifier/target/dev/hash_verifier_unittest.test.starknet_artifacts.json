@@ -1,0 +1,1 @@
+{"version":1,"contracts":[{"id":"2o0otdjeet7r0","package_name":"hash_verifier","contract_name":"HashVerifier","module_path":"hash_verifier::HashVerifier","artifacts":{"sierra":"hash_verifier_unittest_HashVerifier.test.contract_class.json","casm":null}}]}

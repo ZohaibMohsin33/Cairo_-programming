@@ -1,0 +1,61 @@
+:root {
+  --ink: #1c1912;
+  --muted: #6b6256;
+  --bg: #f6f1e6;
+  --surface: #fefaf4;
+  --panel: #fff8ec;
+  --border: #e3dbcf;
+  --accent: #0f766e;
+  --shadow-soft: rgba(15, 23, 42, 0.08) 0 16px 40px -24px;
+  --shadow-accent: rgba(15, 118, 110, 0.25) 0 12px 30px -14px;
+
+  --display: 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  --ui: 'Segoe UI', 'Trebuchet MS', 'Calibri', sans-serif;
+  --mono: 'Consolas', 'Courier New', monospace;
+
+  font: 16px/150% var(--ui);
+  color: var(--ink);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(15, 118, 110, 0.12), transparent 45%),
+    radial-gradient(circle at 90% 0%, rgba(245, 158, 11, 0.12), transparent 40%),
+    linear-gradient(160deg, #f9f4ea 0%, #f3ede2 55%, #efe7d6 100%);
+  min-height: 100svh;
+}
+
+#root {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+h1,
+h2 {
+  font-family: var(--display);
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: clamp(2.1rem, 2.5vw + 1.5rem, 3.4rem);
+}
+
+h2 {
+  font-size: 1.35rem;
+}
+
+input,
+button {
+  font-family: var(--ui);
+}
