@@ -1,0 +1,11 @@
+[package]
+name = "erc721_basics"
+version = "0.1.0"
+edition = "2023_11"
+
+# Cairo/Starknet dependency — required for ContractAddress, storage, events
+[dependencies]
+starknet = ">=2.6.3"
+
+# Tells Scarb to compile this package as a Starknet contract
+[[target.starknet-contract]]
