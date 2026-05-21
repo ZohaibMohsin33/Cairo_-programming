@@ -1,0 +1,13 @@
+[package]
+name = "toy_event_logger"
+version = "0.1.0"
+edition = "2024_07"
+
+# Starknet dependency for smart contract features
+[dependencies]
+starknet = ">=2.6.0"
+
+# Tell Scarb to compile this as a Starknet contract
+[[target.starknet-contract]]
+sierra = true
+casm = true
